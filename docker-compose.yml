@@ -1,0 +1,13 @@
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - APP_URL=http://localhost:3000
+    volumes:
+      - app-data:/app/data
+
+volumes:
+  app-data:

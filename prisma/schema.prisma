@@ -1,0 +1,74 @@
+// Pyronis SMP — website database schema
+// SQLite: zero-config, file-based, no separate DB server or password needed.
+//
+// This used to back the AI Minecraft Server Pack Builder — the pack-
+// generation/plugin-registry/AI-chat models have been removed along with
+// that feature. What's left is generic site infrastructure: accounts,
+// admin tooling, and editable legal content. The account system is kept
+// working but not currently linked to from anywhere public (homepage,
+// nav) until the direction for it (shop logins?) is decided.
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Users & roles ----------
+
+model User {
+  id              String    @id @default(uuid())
+  email           String    @unique
+  username        String    @unique
+  passwordHash    String
+  role            String    @default("USER") // Role: USER | ADMIN | OWNER
+  isBlocked       Boolean   @default(false)
+  termsAcceptedAt DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  auditLogs     AuditLog[]
+  notifications Notification[]
+}
+
+// ---------- Admin / system ----------
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  action    String
+  details   String?  // JSON-encoded
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+}
+
+model SystemSetting {
+  key   String @id
+  value String
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  type      String // e.g. "password_changed"
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+// ---------- Legal content (editable from Admin, no redeploy) ----------
+
+model LegalDocument {
+  type              String    @id // "terms" | "privacy"
+  draftContent      String    // Markdown, rendered as plain text (no HTML/script execution)
+  publishedContent  String?
+  publishedAt       DateTime?
+  updatedAt         DateTime  @updatedAt
+}
